@@ -141,12 +141,11 @@
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
     
     NSDictionary* argsMap = call.arguments;
-
+    
     if ([@"start" isEqualToString:call.method]) {
         NSString* media = argsMap[@"media"];
         BOOL isAuto = [argsMap[@"auto"] boolValue];
         NSString* ringback = argsMap[@"ringback"];
-        [self stopRingtone];
         [self start:media auto:isAuto ringbackUriType:ringback];
         result(nil);
     }
@@ -186,7 +185,7 @@
     else if([@"startRingtone" isEqualToString:call.method]){
         NSString* ringtoneUriType = argsMap[@"ringtoneUriType"];
         NSString* ios_category = argsMap[@"ios_category"];
-        [self startRingtone:ringtoneUriType ringtoneCategory:ios_category];
+        [self startRingtone:@"_BUNDLE_" ringtoneCategory:@"playback"];
         result(nil);
     }
     else if([@"stopRingtone" isEqualToString:call.method]){
@@ -194,7 +193,7 @@
         result(nil);
     }
     else if([@"startRingback" isEqualToString:call.method]){
-      //  [self startRingback:@"_BUNDLE_"];
+        //        [self startRingback:@"_BUNDLE_"];
         [self startRingtone:@"_BUNDLE_" ringtoneCategory:@"playback"];
         result(nil);
     }
@@ -237,16 +236,18 @@
 }
 
 - (void) start:(NSString *)mediaType
-          auto:(BOOL)_auto
+auto:(BOOL)_auto
 ringbackUriType:(NSString *)ringbackUriType
 {
     if (_audioSessionInitialized) {
         return;
     }
-//    if (![_recordPermission isEqualToString:@"granted"]) {
-//        NSLog(@"FlutterInCallManager.start(): recordPermission should be granted. state: %@", _recordPermission);
-//        return;
-//    }
+    //    if (![_recordPermission isEqualToString:@"granted"]) {
+    //        NSLog(@"FlutterInCallManager.start(): recordPermission should be granted. state: %@", _recordPermission);
+    //        return;
+    //    }
+    [self stopRingtone];
+    
     _media = mediaType;
     
     // --- auto is always true on ios
@@ -273,9 +274,9 @@ ringbackUriType:(NSString *)ringbackUriType
         [self startRingback:ringbackUriType];
     }
     
-    if ([_media isEqualToString:@"audio"]) {
-        [self startProximitySensor];
-    }
+    //    if ([_media isEqualToString:@"audio"]) {
+    [self startProximitySensor];
+    //    }
     [self setKeepScreenOn:YES];
     _audioSessionInitialized = YES;
     //self.debugAudioSession()
@@ -353,7 +354,7 @@ ringbackUriType:(NSString *)ringbackUriType
     BOOL success;
     NSError *error = nil;
     NSArray* routes = [_audioSession availableInputs];
-
+    
     if(!enable){
         NSLog(@"Routing audio via Earpiece");
         @try {
@@ -367,7 +368,7 @@ ringbackUriType:(NSString *)ringbackUriType
             success = [_audioSession setActive:YES error:&error];
             if (!success) NSLog(@"Audio session override failed: %@", error);
             else NSLog(@"AudioSession override is successful ");
-
+            
         } @catch (NSException *e) {
             NSLog(@"Error occurred while routing audio via Earpiece. Reason: %@", e.reason);
         }
@@ -376,8 +377,8 @@ ringbackUriType:(NSString *)ringbackUriType
         @try {
             NSLog(@"Available routes: %@", routes[0]);
             success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
-                        withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
-                        error:nil];
+                                     withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
+                                           error:nil];
             if (!success)  NSLog(@"Cannot set category due to error: %@", error);
             success = [_audioSession setMode:AVAudioSessionModeVoiceChat error: &error];
             if (!success)  NSLog(@"Cannot set mode due to error: %@", error);
@@ -947,22 +948,22 @@ ringbackUriType:(NSString *)ringbackUriType
                                                     object:nil
                                                      queue:nil
                                                      block:^(NSNotification *notification) {
-                                                         if (notification.userInfo == nil
-                                                             || ![notification.name isEqualToString:AVAudioSessionInterruptionNotification]) {
-                                                             return;
-                                                         }
-                                                         
-                                                         //NSUInteger rawValue = notification.userInfo[AVAudioSessionInterruptionTypeKey].unsignedIntegerValue;
-                                                         NSNumber *interruptType = [notification.userInfo objectForKey:@"AVAudioSessionInterruptionTypeKey"];
-                                                         if ([interruptType unsignedIntegerValue] == AVAudioSessionInterruptionTypeBegan) {
-                                                             NSLog(@"FlutterInCallManager.AudioSessionInterruptionNotification: Began");
-                                                         } else if ([interruptType unsignedIntegerValue] == AVAudioSessionInterruptionTypeEnded) {
-                                                             NSLog(@"FlutterInCallManager.AudioSessionInterruptionNotification: Ended");
-                                                         } else {
-                                                             NSLog(@"FlutterInCallManager.AudioSessionInterruptionNotification: Unknow Value");
-                                                         }
-                                                         //NSLog(@"RNInCallManager.AudioSessionInterruptionNotification: could not resolve notification");
-                                                     }];
+        if (notification.userInfo == nil
+            || ![notification.name isEqualToString:AVAudioSessionInterruptionNotification]) {
+            return;
+        }
+        
+        //NSUInteger rawValue = notification.userInfo[AVAudioSessionInterruptionTypeKey].unsignedIntegerValue;
+        NSNumber *interruptType = [notification.userInfo objectForKey:@"AVAudioSessionInterruptionTypeKey"];
+        if ([interruptType unsignedIntegerValue] == AVAudioSessionInterruptionTypeBegan) {
+            NSLog(@"FlutterInCallManager.AudioSessionInterruptionNotification: Began");
+        } else if ([interruptType unsignedIntegerValue] == AVAudioSessionInterruptionTypeEnded) {
+            NSLog(@"FlutterInCallManager.AudioSessionInterruptionNotification: Ended");
+        } else {
+            NSLog(@"FlutterInCallManager.AudioSessionInterruptionNotification: Unknow Value");
+        }
+        //NSLog(@"RNInCallManager.AudioSessionInterruptionNotification: could not resolve notification");
+    }];
     
     _isAudioSessionInterruptionRegistered = YES;
 }
@@ -1124,9 +1125,9 @@ ringbackUriType:(NSString *)ringbackUriType
                                                              object:nil
                                                               queue:nil
                                                               block:^(NSNotification *notification) {
-                                                                  // --- This notification has no userInfo dictionary.
-                                                                  NSLog(@"FlutterInCallManager.AudioSessionMediaServicesWereLostNotification: Media Services Were Lost");
-                                                              }];
+        // --- This notification has no userInfo dictionary.
+        NSLog(@"FlutterInCallManager.AudioSessionMediaServicesWereLostNotification: Media Services Were Lost");
+    }];
     
     _isAudioSessionMediaServicesWereLostRegistered = YES;
 }
@@ -1164,9 +1165,9 @@ ringbackUriType:(NSString *)ringbackUriType
                                                               object:nil
                                                                queue:nil
                                                                block:^(NSNotification *notification) {
-                                                                   // --- This notification has no userInfo dictionary.
-                                                                   NSLog(@"FlutterInCallManager.AudioSessionMediaServicesWereResetNotification: Media Services Were Reset");
-                                                               }];
+        // --- This notification has no userInfo dictionary.
+        NSLog(@"FlutterInCallManager.AudioSessionMediaServicesWereResetNotification: Media Services Were Reset");
+    }];
     
     _isAudioSessionMediaServicesWereResetRegistered = YES;
 }
@@ -1204,25 +1205,25 @@ ringbackUriType:(NSString *)ringbackUriType
                                                                  object:nil
                                                                   queue:nil
                                                                   block:^(NSNotification *notification) {
-                                                                      if (notification.userInfo == nil
-                                                                          || ![notification.name isEqualToString:AVAudioSessionSilenceSecondaryAudioHintNotification]) {
-                                                                          return;
-                                                                      }
-                                                                      
-                                                                      NSNumber *silenceSecondaryAudioHintType = [notification.userInfo objectForKey:@"AVAudioSessionSilenceSecondaryAudioHintTypeKey"];
-                                                                      NSUInteger silenceSecondaryAudioHintTypeValue = [silenceSecondaryAudioHintType unsignedIntegerValue];
-                                                                      switch (silenceSecondaryAudioHintTypeValue) {
-                                                                          case AVAudioSessionSilenceSecondaryAudioHintTypeBegin:
-                                                                              NSLog(@"FlutterInCallManager.AVAudioSessionSilenceSecondaryAudioHintNotification: Begin");
-                                                                              break;
-                                                                          case AVAudioSessionSilenceSecondaryAudioHintTypeEnd:
-                                                                              NSLog(@"FlutterInCallManager.AVAudioSessionSilenceSecondaryAudioHintNotification: End");
-                                                                              break;
-                                                                          default:
-                                                                              NSLog(@"FlutterInCallManager.AVAudioSessionSilenceSecondaryAudioHintNotification: Unknow Value");
-                                                                              break;
-                                                                      }
-                                                                  }];
+        if (notification.userInfo == nil
+            || ![notification.name isEqualToString:AVAudioSessionSilenceSecondaryAudioHintNotification]) {
+            return;
+        }
+        
+        NSNumber *silenceSecondaryAudioHintType = [notification.userInfo objectForKey:@"AVAudioSessionSilenceSecondaryAudioHintTypeKey"];
+        NSUInteger silenceSecondaryAudioHintTypeValue = [silenceSecondaryAudioHintType unsignedIntegerValue];
+        switch (silenceSecondaryAudioHintTypeValue) {
+            case AVAudioSessionSilenceSecondaryAudioHintTypeBegin:
+                NSLog(@"FlutterInCallManager.AVAudioSessionSilenceSecondaryAudioHintNotification: Begin");
+                break;
+            case AVAudioSessionSilenceSecondaryAudioHintTypeEnd:
+                NSLog(@"FlutterInCallManager.AVAudioSessionSilenceSecondaryAudioHintNotification: End");
+                break;
+            default:
+                NSLog(@"FlutterInCallManager.AVAudioSessionSilenceSecondaryAudioHintNotification: Unknow Value");
+                break;
+        }
+    }];
     _isAudioSessionSilenceSecondaryAudioHintRegistered = YES;
 }
 
