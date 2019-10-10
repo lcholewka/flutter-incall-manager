@@ -146,6 +146,7 @@
         NSString* media = argsMap[@"media"];
         BOOL isAuto = [argsMap[@"auto"] boolValue];
         NSString* ringback = argsMap[@"ringback"];
+        [self stopRingtone];
         [self start:media auto:isAuto ringbackUriType:ringback];
         result(nil);
     }
@@ -193,7 +194,8 @@
         result(nil);
     }
     else if([@"startRingback" isEqualToString:call.method]){
-        [self startRingback:@"_BUNDLE_"];
+      //  [self startRingback:@"_BUNDLE_"];
+        [self startRingtone:@"_BUNDLE_" ringtoneCategory:@"playback"];
         result(nil);
     }
     else if([@"stopRingback" isEqualToString:call.method]){
@@ -241,10 +243,10 @@ ringbackUriType:(NSString *)ringbackUriType
     if (_audioSessionInitialized) {
         return;
     }
-    if (![_recordPermission isEqualToString:@"granted"]) {
-        NSLog(@"FlutterInCallManager.start(): recordPermission should be granted. state: %@", _recordPermission);
-        return;
-    }
+//    if (![_recordPermission isEqualToString:@"granted"]) {
+//        NSLog(@"FlutterInCallManager.start(): recordPermission should be granted. state: %@", _recordPermission);
+//        return;
+//    }
     _media = mediaType;
     
     // --- auto is always true on ios
